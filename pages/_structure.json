@@ -1,0 +1,363 @@
+{
+ "title": [
+  "GT32U2086 SDK\nUSER GUIDE"
+ ],
+ "subtitle": [
+  "Application Development with Neon MDF"
+ ],
+ "tagline": [
+  "Application development, peripheral APIs, FreeRTOS, and PC firmware programming"
+ ],
+ "parts": [
+  {
+   "title": "PART 1: SDK OVERVIEW AND DEVELOPMENT FUNDAMENTALS",
+   "label": "part1",
+   "chapters": [
+    {
+     "title": "Chapter 1: GT32U2086 SDK Overview and Development Environment",
+     "label": "ch01",
+     "file": "01_chapter_1.md",
+     "sections": [
+      {
+       "title": "1.1 GT32U2086 Technical Specifications",
+       "label": "ch01_gt32u2086_technical_specifications"
+      },
+      {
+       "title": "1.2 SDK Software Architecture",
+       "label": "ch01_sdk_software_architecture"
+      },
+      {
+       "title": "1.3 SDK Directory Structure and Example Organization",
+       "label": "ch01_sdk_directory_structure_and_example_organization"
+      },
+      {
+       "title": "1.4 Required Tools and Environment Setup",
+       "label": "ch01_required_tools_and_environment_setup"
+      }
+     ]
+    },
+    {
+     "title": "Chapter 2: GT32U2086 Application Requirements",
+     "label": "ch02",
+     "file": "02_chapter_2.md",
+     "sections": [
+      {
+       "title": "2.1 Aligned 32-Bit Memory Access",
+       "label": "ch02_aligned_32_bit_memory_access"
+      }
+     ]
+    },
+    {
+     "title": "Chapter 3: First Application and UART Firmware Programming",
+     "label": "ch03",
+     "file": "03_chapter_3.md",
+     "sections": [
+      {
+       "title": "3.1 Building the Printf_Log Example",
+       "label": "ch03_building_the_printf_log_example"
+      },
+      {
+       "title": "3.2 UART Firmware Programming with GT32U2086 Flash Tool 1.0",
+       "label": "ch03_uart_firmware_programming_with_gt32u2086_flash_tool_1_0"
+      },
+      {
+       "title": "3.3 Creating Your First Application",
+       "label": "ch03_creating_your_first_application"
+      },
+      {
+       "title": "3.4 Using the VS Code Extension",
+       "label": "ch03_using_the_vs_code_extension"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "title": "PART 2: PROJECT ORGANIZATION AND PERIPHERAL DRIVERS",
+   "label": "part2",
+   "chapters": [
+    {
+     "title": "Chapter 4: Project Configuration and Module Organization",
+     "label": "ch04",
+     "file": "04_chapter_4.md",
+     "sections": [
+      {
+       "title": "4.1 Project Structure and Templates",
+       "label": "ch04_project_structure_and_templates"
+      },
+      {
+       "title": "4.2 Managing Sources and Dependencies with CMake",
+       "label": "ch04_managing_sources_and_dependencies_with_cmake"
+      },
+      {
+       "title": "4.3 Configuring the SDK with menuconfig",
+       "label": "ch04_configuring_the_sdk_with_menuconfig"
+      },
+      {
+       "title": "4.4 Using Peripheral Drivers in Applications",
+       "label": "ch04_using_peripheral_drivers_in_applications"
+      },
+      {
+       "title": "4.5 Application Module Organization: GPIO Example",
+       "label": "ch04_application_module_organization_gpio_example"
+      },
+      {
+       "title": "4.6 Running Examples and Verifying Integration",
+       "label": "ch04_running_examples_and_verifying_integration"
+      }
+     ]
+    },
+    {
+     "title": "Chapter 5: Basic Peripherals and Communication Interfaces",
+     "label": "ch05",
+     "file": "05_chapter_5.md",
+     "sections": [
+      {
+       "title": "5.1 GPIO",
+       "label": "ch05_gpio"
+      },
+      {
+       "title": "5.2 UART and printf Console",
+       "label": "ch05_uart_and_printf_console"
+      },
+      {
+       "title": "5.3 Hardware Timers and PWM",
+       "label": "ch05_hardware_timers_and_pwm"
+      },
+      {
+       "title": "5.4 I²C Interface",
+       "label": "ch05_i_c_interface"
+      },
+      {
+       "title": "5.5 SPI Interface",
+       "label": "ch05_spi_interface"
+      }
+     ]
+    },
+    {
+     "title": "Chapter 6: Advanced Peripherals and Data Processing",
+     "label": "ch06",
+     "file": "06_chapter_6.md",
+     "sections": [
+      {
+       "title": "6.1 ADC",
+       "label": "ch06_adc"
+      },
+      {
+       "title": "6.2 DMA",
+       "label": "ch06_dma"
+      },
+      {
+       "title": "6.3 RTC and WDT",
+       "label": "ch06_rtc_and_wdt"
+      },
+      {
+       "title": "6.4 Internal Flash",
+       "label": "ch06_internal_flash"
+      },
+      {
+       "title": "6.5 QSPI Indirect Mode",
+       "label": "ch06_qspi_indirect_mode"
+      },
+      {
+       "title": "6.6 CRC, AES, and TRNG",
+       "label": "ch06_crc_aes_and_trng"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "title": "PART 3: APPLICATION DEVELOPMENT WITH FREERTOS",
+   "label": "part3",
+   "chapters": [
+    {
+     "title": "Chapter 7: Task Initialization and Management on GT32U2086",
+     "label": "ch07",
+     "file": "07_chapter_7.md",
+     "sections": [
+      {
+       "title": "7.1 Bare-Metal and FreeRTOS Applications",
+       "label": "ch07_bare_metal_and_freertos_applications"
+      },
+      {
+       "title": "7.2 Task States",
+       "label": "ch07_task_states"
+      },
+      {
+       "title": "7.3 Creating Tasks and Starting the Scheduler",
+       "label": "ch07_creating_tasks_and_starting_the_scheduler"
+      },
+      {
+       "title": "7.4 Stack and Heap Management",
+       "label": "ch07_stack_and_heap_management"
+      },
+      {
+       "title": "7.5 Peripheral Ownership",
+       "label": "ch07_peripheral_ownership"
+      },
+      {
+       "title": "7.6 FreeRTOS_Peripheral_Queue Example",
+       "label": "ch07_freertos_peripheral_queue_example"
+      }
+     ]
+    },
+    {
+     "title": "Chapter 8: Scheduling and Software Timers",
+     "label": "ch08",
+     "file": "08_chapter_8.md",
+     "sections": [
+      {
+       "title": "8.1 Task Priorities",
+       "label": "ch08_task_priorities"
+      },
+      {
+       "title": "8.2 Preemptive Scheduling and Time Slicing",
+       "label": "ch08_preemptive_scheduling_and_time_slicing"
+      },
+      {
+       "title": "8.3 Scheduling Events",
+       "label": "ch08_scheduling_events"
+      },
+      {
+       "title": "8.4 Delays and Periodic Task Execution",
+       "label": "ch08_delays_and_periodic_task_execution"
+      },
+      {
+       "title": "8.5 Kernel Exception Handlers",
+       "label": "ch08_kernel_exception_handlers"
+      },
+      {
+       "title": "8.6 FreeRTOS Software Timers",
+       "label": "ch08_freertos_software_timers"
+      }
+     ]
+    },
+    {
+     "title": "Chapter 9: Inter-Task Communication and Synchronization",
+     "label": "ch09",
+     "file": "09_chapter_9.md",
+     "sections": [
+      {
+       "title": "9.1 Communication Mechanisms",
+       "label": "ch09_communication_mechanisms"
+      },
+      {
+       "title": "9.2 Using Queues",
+       "label": "ch09_using_queues"
+      },
+      {
+       "title": "9.3 Pointer Transfer and Buffer Ownership",
+       "label": "ch09_pointer_transfer_and_buffer_ownership"
+      },
+      {
+       "title": "9.4 Communication from Interrupt Service Routines",
+       "label": "ch09_communication_from_interrupt_service_routines"
+      },
+      {
+       "title": "9.5 Handling Full Queues",
+       "label": "ch09_handling_full_queues"
+      },
+      {
+       "title": "9.6 Mutexes, Semaphores, and Event Groups",
+       "label": "ch09_mutexes_semaphores_and_event_groups"
+      },
+      {
+       "title": "9.7 Protecting Peripheral Transactions",
+       "label": "ch09_protecting_peripheral_transactions"
+      },
+      {
+       "title": "9.8 Deadlocks and Priority Inversion",
+       "label": "ch09_deadlocks_and_priority_inversion"
+      },
+      {
+       "title": "9.9 Shared Resources",
+       "label": "ch09_shared_resources"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "title": "PART 4: PC FIRMWARE PROGRAMMING",
+   "label": "part4",
+   "chapters": [
+    {
+     "title": "Chapter 10: PC Flashing Tool and Firmware Updates",
+     "label": "ch10",
+     "file": "10_chapter_10.md",
+     "sections": [
+      {
+       "title": "10.1 PC Tool and Firmware Preparation",
+       "label": "ch10_pc_tool_and_firmware_preparation"
+      },
+      {
+       "title": "10.2 Programming over UART",
+       "label": "ch10_programming_over_uart"
+      },
+      {
+       "title": "10.3 Boot Modes and External Flash",
+       "label": "ch10_boot_modes_and_external_flash"
+      },
+      {
+       "title": "10.4 Retrying an Interrupted or Failed Update",
+       "label": "ch10_retrying_an_interrupted_or_failed_update"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "title": "PART 5: TROUBLESHOOTING AND REFERENCE",
+   "label": "part5",
+   "chapters": [
+    {
+     "title": "Chapter 11: Troubleshooting",
+     "label": "ch11",
+     "file": "11_chapter_11.md",
+     "sections": [
+      {
+       "title": "11.1 Troubleshooting Table",
+       "label": "ch11_troubleshooting_table"
+      },
+      {
+       "title": "11.2 Information to Include in an Issue Report",
+       "label": "ch11_information_to_include_in_an_issue_report"
+      }
+     ]
+    },
+    {
+     "title": "Appendix A: Status Codes and API Reference",
+     "label": "appendix_a",
+     "file": "12_appendix_a.md",
+     "sections": [
+      {
+       "title": "A.1 neon_status_t Status Codes",
+       "label": "appendix_a_a_1_neon_status_t_status_codes"
+      },
+      {
+       "title": "A.2 Timeout Semantics",
+       "label": "appendix_a_a_2_timeout_semantics"
+      },
+      {
+       "title": "A.3 GPIO API",
+       "label": "appendix_a_a_3_gpio_api"
+      },
+      {
+       "title": "A.4 UART API",
+       "label": "appendix_a_a_4_uart_api"
+      },
+      {
+       "title": "A.5 ADC API",
+       "label": "appendix_a_a_5_adc_api"
+      },
+      {
+       "title": "A.6 Public Header Index",
+       "label": "appendix_a_a_6_public_header_index"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
