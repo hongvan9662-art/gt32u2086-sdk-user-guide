@@ -1,0 +1,102 @@
+name: Tao trang tai lieu
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      prefer_word:
+        description: "Lấy nội dung file Word ở những đoạn bị sửa khác nhau (giữa file Word và trang web)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: tao-trang
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    outputs:
+      conflict: ${{ steps.sync.outputs.conflict }}
+    steps:
+      - name: Lấy file trong kho
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Cài Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Cài Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Cài công cụ (Doxygen, python-docx, Playwright)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q doxygen
+          doxygen --version
+          python -m pip install -q python-docx==1.2.0
+          npm install --no-save --no-audit --no-fund playwright@1.63.0
+          npx playwright install --with-deps chromium
+
+      - name: Cập nhật trang từ file Word (nếu có file Word mới)
+        id: sync
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch -q --force origin "refs/tags/*:refs/tags/*" || true
+          set +e
+          python tools/sync_from_word.py ${{ inputs.prefer_word && '--prefer-word' || '' }}
+          code=$?
+          set -e
+          if [ "$code" = "2" ]; then echo "conflict=yes" >> "$GITHUB_OUTPUT"; else echo "conflict=no" >> "$GITHUB_OUTPUT"; fi
+          if [ "$code" != "0" ] && [ "$code" != "2" ]; then exit "$code"; fi
+
+      - name: Lưu các trang đã cập nhật vào kho
+        run: |
+          git add -A -- README.md pages theme/gt32u2086_nav.js images '*.docx'
+          if ! git diff --cached --quiet; then
+            git commit -q -m "Cập nhật trang từ file Word"
+            git pull -q --rebase origin main
+            git push -q origin HEAD:main
+          fi
+          git push -q --force origin refs/tags/word-base
+
+      - name: Tạo trang web và PDF
+        run: bash build.sh
+
+      - name: Chuẩn bị trang để đăng
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: build/html
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Đăng lên GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+
+  bao-trung:
+    needs: [build, deploy]
+    if: needs.build.outputs.conflict == 'yes'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Báo đoạn bị sửa khác nhau
+        run: |
+          echo "::error::File Word mới CHƯA được cập nhật vào trang web vì có đoạn bị sửa khác nhau ở cả file Word và trên trang web. Bấm vào bước build để xem chi tiết và cách xử lý (phần Summary)."
+          exit 1
