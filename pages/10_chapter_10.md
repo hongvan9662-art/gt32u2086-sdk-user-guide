@@ -97,7 +97,25 @@ Use modes 100 and 000 for the UART workflow above. Other boot modes require firm
 
 GT32U2086 Flash Tool 1.0 rejects XIP firmware and does not program QSPI Flash or change hardware boot switches. For modes 101 and 111, use board-specific tools and instructions.
 
-## 10.4 Retrying an Interrupted or Failed Update {#ch10_retrying_an_interrupted_or_failed_update}
+## 10.4 Signed Firmware and NVR Policy {#ch10_signed_firmware_and_nvr_policy}
+
+Install cryptography in the Python environment used by CMake. From the application directory, enable signing and select the private key:
+
+```
+python -m pip install cryptography
+cmake --preset GT32U2086 -DNEON_MDF_SECURE_BOOT=ON -DNEON_MDF_SIGNING_KEY=/absolute/path/to/key.pem
+cmake --build --preset GT32U2086
+```
+
+The build produces &lt;app&gt;\_image.bin and &lt;app&gt;\_image_signed.bin; the standard UART flash target selects the signed file when signing is enabled. NEON_MDF_GT32U2086_APP_VERSION selects the application version. Set NEON_MDF_SECURE_BOOT=OFF to return to unsigned builds.
+
+The bundled tools/key.pem is shared development example material. Product firmware uses a separately managed private key and matching public key provisioned into Flash NVR. Provisioning security policy/public keys is a separate factory operation; do not use the legacy eFuse/OTP map.
+
+BootROM v5 uses ECDSA P-256. Preserve the fixed DOMAIN constant in tools/gt32u2086_image.py; its exact ASCII bytes are 46 55 32 2D 49 4D 41 47 45 2D 56 31 (hex). It is a protocol constant independent of the product name. BootROM v5 does not authenticate QSPI XIP images and CMake rejects signing with the xip profile.
+
+Local \--check-only validates header, size, CRC and vectors and reports signature presence. It does not read device NVR or establish that a particular board will authenticate the image. The signing tool verifies its output; board acceptance also depends on provisioned policy/key.
+
+## 10.5 Retrying an Interrupted or Failed Update {#ch10_retrying_an_interrupted_or_failed_update}
 
 Reconnect the board, close other programs using the port, and repeat Section 10.2 with the intended firmware: select mode 100, start the tool, wait for UART readiness, then reset. Select mode 000 after successful programming.
 

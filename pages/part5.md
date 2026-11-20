@@ -5,6 +5,7 @@
 - @subpage ch11
     - @ref ch11_troubleshooting_table
     - @ref ch11_information_to_include_in_an_issue_report
+    - @ref ch11_build_checks_and_board_acceptance
 - @subpage appendix_a
     - @ref appendix_a_a_1_neon_status_t_status_codes
     - @ref appendix_a_a_2_timeout_semantics

@@ -84,8 +84,8 @@ For a private library, declare a library target and link it with target_link_lib
 |:---|:---|
 | Edit an already registered .c file | Rebuild; the programming target builds the application when required. |
 | Add a .c file or header directory | Update target_sources/target_include_directories, configure, then build. |
-| Enable or disable a driver in sdkconfig | Save the configuration, reconfigure to update sources and macros, then build. |
-| Switch between normal/xip profiles | Configure with -DNEON_MDF_PROFILE=normal or xip, then build each profile sequentially. Use normal for UART programming; Section 10.3 explains external Flash programming support. |
+| Enable or disable a driver in sdkconfig | Save the configuration and build; CMake refreshes tracked configuration inputs. |
+| Switch between normal/xip profiles | Configure with -DNEON_MDF_PROFILE=normal or xip, then use separate build directories for concurrent profiles. Use normal for UART programming; Section 10.3 explains external Flash programming support. |
 | Change the programming tool's port, baud rate, byte gap, or log mode | Pass variables when invoking the programming target as shown in Section 3.2; reconfiguration is not required. |
 
 ## 4.3 Configuring the SDK with menuconfig {#ch04_configuring_the_sdk_with_menuconfig}
@@ -98,7 +98,7 @@ cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-Each application has its own sdkconfig. After changing module selections, reconfigure to update the source list and definitions. Do not edit generated sdkconfig.h or CMake fragments under build/config. CMake uses CONFIG_NEON_MDF_DRIVER\_&lt;MODULE&gt; to select sources; a C-level switch alone does not add a disabled driver to the library.
+Each application has its own sdkconfig. Saved module selections are applied automatically on the next build. Do not edit generated sdkconfig.h or CMake fragments under build/GT32U2086/config. CMake uses CONFIG_NEON_MDF_DRIVER\_&lt;MODULE&gt; to select sources; a C-level switch alone does not add a disabled driver to the library.
 
 Enable CONFIG_NEON_MDF_DRIVER_UART=y when the application calls printf. On GT32U2086, enabling UART also includes the console in the build.
 
@@ -128,7 +128,7 @@ This option appears alongside the SDK options in menuconfig and is saved as CONF
 #endif
 ```
 
-Keep the UART driver enabled when logging is enabled. Maintain Kconfig, sdkconfig, CMakeLists.txt, and CMakePresets.json with the sources so the application configuration can be reproduced; do not edit generated files under build/config.
+Keep the UART driver enabled when logging is enabled. Maintain Kconfig, sdkconfig, CMakeLists.txt, and CMakePresets.json with the sources so the application configuration can be reproduced; do not edit generated files under build/GT32U2086/config.
 
 ## 4.4 Using Peripheral Drivers in Applications {#ch04_using_peripheral_drivers_in_applications}
 
@@ -172,9 +172,18 @@ Use the module-specific NEON_UART/I2C/SPI/QSPI/PWM_PIN_CONFIG_KEEP value when bo
 
 Initialize configuration structs with the module get_default_config function, or zero-initialize where documented. SPI/PWM/QSPI structs now include pin_config, so rebuild all code using these headers. QSPI also provides neon_qspi_get_default_config. Internal counter-only TIM operations and APIs without a mapped pin function do not configure SYSCSR routes.
 
+CMake tracks sdkconfig, sourced Kconfig files, YAML and generators. The next CLI or direct CMake build refreshes saved configuration automatically. Explicit configure steps remain valid. Profile/toolchain/interpreter changes still require a configure.
+
+For parallel profiles, keep separate output directories:
+
+```
+cmake --preset GT32U2086 -B build/GT32U2086-xip -DNEON_MDF_PROFILE=xip
+cmake --build build/GT32U2086-xip
+```
+
 ## 4.5 Application Module Organization: GPIO Example {#ch04_application_module_organization_gpio_example}
 
-This example extends my_app from Section 3.3 to read a button on PB5 and control PB1. The application gains an init/process module, while main only coordinates execution. Connect the button from PB5 to GND with a suitable pull-up and connect an LED/output to PB1; change the pins if required by your board.
+This example extends my_app from Section 3.3 to read a button on PB5 and control PB7. The application gains an init/process module, while main only coordinates execution. Connect the button from PB5 to GND with a suitable pull-up and connect an LED/output to PB7; change the pins if required by your board.
 
 ### Creating app_gpio.h {#ch04_creating_app_gpio_h}
 
@@ -271,7 +280,7 @@ cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-Program my_app_image.bin using flash_uart_gt32u2086 as described in Section 3.2. Select mode 000, open the monitor, and reset to observe [INFO] my_app GPIO ready. PB1 is low when the button is released and high when PB5 is pressed. This module demonstrates polling without debouncing; add debouncing if the application requires one event per button press.
+Program my_app_image.bin using flash_uart_gt32u2086 as described in Section 3.2. Select mode 000, open the monitor, and reset to observe [INFO] my_app GPIO ready. PB7 is low when the button is released and high when PB5 is pressed. This module demonstrates polling without debouncing; add debouncing if the application requires one event per button press.
 
 Use the same organization for other peripherals: app\_&lt;module&gt;\_init for one-time configuration, app\_&lt;module&gt;\_process or a task for repeated processing, a private header, and sources registered with the target. Driver-specific steps are provided in Chapters 5–7.
 
@@ -292,13 +301,13 @@ Examples are included in the corresponding peripheral sections in Chapters 5–6
 | 5.1 GPIO | Blinky; GPIO_Input_Output; GPIO_Interrupt |
 | 5.2 UART and console | Printf_Log; UART_ECHO_Polling; UART_RX_Interrupt |
 | 5.3 TIM and PWM | TIM_Periodic_Interrupt; PWM_Output |
-| 5.4 I²C | I2C_Register_Read_Write; I2C_Slave; I2C_DMA |
-| 5.5 SPI | FPGA_Terminal/testcase/SPI_W5500; SPI_DMA integration through the driver API |
+| 5.4 I²C | I2C_EEPROM; I2C_DMA; slave integration through the public API |
+| 5.5 SPI | SPI_W5500; SPI_DMA |
 | 6.1 ADC | ADC_Sampling |
-| 6.2 DMA | DMA_Memory_Copy |
+| 6.2 DMA | No standalone project; public DMA memory-copy API |
 | 6.3 RTC and WDT | RTC_Calendar |
 | 6.4 Internal Flash | Flash_Read_Write |
-| 6.5 QSPI | QSPI_Flash_Indirect |
+| 6.5 QSPI | QSPI_Flash_Read_Write; QSPI_XIP_Read |
 | 6.6 CRC, AES, and TRNG | CRC_Known_Vector; AES_Known_Vector; TRNG_Read |
 | 7.6 FreeRTOS | FreeRTOS_Peripheral_Queue |
 

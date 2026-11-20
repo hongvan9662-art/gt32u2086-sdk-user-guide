@@ -82,6 +82,19 @@ void vApplicationStackOverflowHook(TaskHandle_t task,
 
 Before vTaskStartScheduler, initialize drivers and all queues/mutexes used by tasks; continue only if resource creation succeeds. The scheduler does not return during normal operation. If it returns, enter an observable error state and check heap allocation and port integration.
 
+### GT32U2086 Port Requirements {#ch07_gt32u2086_port_requirements}
+
+```
+#define configCPU_CLOCK_HZ (SystemCoreClock)
+#define configCHECK_HANDLER_INSTALLATION 0
+#define configUSE_PORT_OPTIMISED_TASK_SELECTION 0
+#define configENABLE_MPU 0
+```
+
+Cortex-M0 has no VTOR or CLZ instruction and this target has no MPU. BootROM forwards exceptions through its SRAM relay and enters with PRIMASK=1; the scheduler enables interrupts. Preserve SVC/PendSV/SysTick integration and the reserved first 4 KiB of SRAM.
+
+The vendored kernel contains word-only patches for fields, task names, memory functions and static-object ABI layout. Preserve these when updating upstream and rebuild all application/kernel objects together. An unmodified kernel replacement can violate the SRAM access contract.
+
 ## 7.4 Stack and Heap Management {#ch07_stack_and_heap_management}
 
 - Allocate enough stack for nested function calls, local variables, and the context saved by the kernel.
@@ -112,7 +125,7 @@ cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-4\. Program build/GT32U2086/freertos_peripheral_queue_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. The producer must send events/data and the consumer must process them correctly; include handling for full queues and driver errors.
+4\. Program build/GT32U2086/gt32u2086_freertos_peripheral_queue_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. The producer must send events/data and the consumer must process them correctly; include handling for full queues and driver errors.
 
 Integrating into Your Application:
 

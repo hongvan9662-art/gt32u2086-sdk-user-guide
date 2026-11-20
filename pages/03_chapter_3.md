@@ -49,7 +49,7 @@ cmake --preset GT32U2086 --fresh -DNEON_MDF_PROFILE=normal
 cmake --build --preset GT32U2086
 ```
 
-Generated GT32U2086 device/linker paths are shared between profiles. Configure and build profiles sequentially, and keep the image header base consistent with the linked payload.
+Generated headers, startup, linker, SVD and image metadata belong to each build directory under generated/GT32U2086/. Separate normal/XIP build directories can configure and build concurrently. Do not run two profiles in the same build directory at once.
 
 ## 3.2 UART Firmware Programming with GT32U2086 Flash Tool 1.0 {#ch03_uart_firmware_programming_with_gt32u2086_flash_tool_1_0}
 
@@ -231,6 +231,11 @@ if(NOT NEON_MDF_PATH)
     endif()
 endif()
 include(${NEON_MDF_PATH}/tools/cmake/project.cmake)
+set(NEON_APP_FIXED_CLOCK_HZ "0" CACHE STRING "Actual fixed board clock Hz; 0 uses CRM")
+if(NOT NEON_APP_FIXED_CLOCK_HZ EQUAL 0)
+    target_compile_definitions(${NEON_MDF_DEVICE_TARGET} PUBLIC
+        GT32U2086_FPGA_FIXED_CLOCK_HZ=${NEON_APP_FIXED_CLOCK_HZ}UL)
+endif()
 neon_mdf_add_executable(my_app Src/main.c)
 ```
 
@@ -275,7 +280,7 @@ The SDK supplies startup code, device headers, the linker script, and the consol
 
 ### Step 4 — Build, Program, and Verify {#ch03_step_4_build_program_and_verify}
 
-From the repository root, open the project and configure it. Before programming, select boot mode 100 and connect UART as described in Section 3.2:
+From the repository root, open the project and configure it. For a known 10 MHz FPGA, add -DNEON_APP_FIXED_CLOCK_HZ=10000000 to the configure command; otherwise select the actual clock or keep 0 for CRM detection. Before programming, select boot mode 100 and connect UART as described in Section 3.2.
 
 ```
 . ./neon-mdf/export.sh
@@ -331,19 +336,33 @@ You can also create an application with the wizard in Section 3.4. Chapter 4 cov
 
 ## 3.4 Using the VS Code Extension {#ch03_using_the_vs_code_extension}
 
-NEON-MDF Tools provides Command Palette commands and status bar controls for target selection, serial port selection, building, firmware programming, and log monitoring. The following example uses examples/Printf_Log.
+Use NEON-MDF Tools to build, program and monitor examples/Printf_Log from VS Code. The first build can run without a board. Connect the board and a USB-UART adapter for programming and monitoring.
 
 ### Installation and Project Setup {#ch03_installation_and_project_setup}
 
-Install CMake Tools, C/C++, and Cortex-Debug as required by your development environment. Install the updated vscode-extension/neon-mdf-tools-0.1.0.vsix package using Extensions: Install from VSIX..., then run Reload Window. The extension package version is managed separately from GT32U2086 Flash Tool 1.0.
+Use VS Code 1.90 or later in the 1.x series. Complete Sections 1.4 and 1.5 on the machine that runs the workspace. Install Arm GNU Toolchain, CMake 3.25 or later, Ninja and Python 3.10 or later. Create .venv in the SDK repository and install neon-mdf/tools/requirements.txt into it. CMake Tools and C/C++ are optional editor extensions. Cortex-Debug is needed for JTAG attach.
 
-Select File → Open Folder... and open examples/Printf_Log, which contains CMakePresets.json. If the SDK is outside its default location, run NEON-MDF: Chon Duong Dan SDK... and select the neon-mdf directory.
+1\. In the SDK checkout, locate vscode-extension/neon-mdf-tools-0.1.6.vsix. In VS Code, open Extensions, choose the ⋯ menu, select Install from VSIX... and pick the file.
+
+2\. Verify that NEON-MDF Tools shows version 0.1.6 in Extensions. Run Developer: Reload Window if prompted. With the VS Code command-line launcher on PATH, you can also install locally from the SDK repository root with this command.
+
+```
+code --install-extension vscode-extension/neon-mdf-tools-0.1.6.vsix
+```
+
+3\. Choose File → Open Folder... and open examples/Printf_Log, which contains CMakePresets.json. The extension requires a trusted workspace. Select the NEON-MDF icon in the Activity Bar to open Board Tools, or run NEON-MDF: Open Board Tools from the Command Palette.
+
+4\. If you opened the repository root, select Printf_Log under Board Tools → Project → Application. Bundled examples normally find the SDK with SDK Path set to Auto. For an SDK in another location, use SDK Path → Browse for the SDK... and select the neon-mdf folder containing tools/cmake/project.cmake. Reset to automatic restores SDK discovery.
+
+### Installing on a Remote SSH Host {#ch03_installing_on_a_remote_ssh_host}
+
+Connect with Remote - SSH and open the project in that SSH window. Use Install from VSIX... in the connected window and check that NEON-MDF Tools 0.1.6 is listed under SSH: Installed. The toolchain, Python environment, SDK path and serial device must be available on the remote host. Select a port visible there.
 
 ### Selecting the Target, Port, and UART Settings {#ch03_selecting_the_target_port_and_uart_settings}
 
-Run NEON-MDF: Chon Target and select GT32U2086. Run NEON-MDF: Chon Transport (UART/JTAG) and select UART. Run NEON-MDF: Chon Cong Serial and select the port connected to the board.
+In Board Tools, verify that Target is GT32U2086 and Transport is UART. Under Device → Serial Port, choose the board adapter. If the device is visible to the host but missing from the list, choose Enter serial port... and enter its path, for example COM3 on Windows, /dev/ttyUSB0 or /dev/ttyACM0 on Linux, or /dev/cu.usbserial-\* on macOS. Replace the wildcard with the actual device name.
 
-Add the following keys to Workspace Settings as needed, retaining the project's other settings:
+Click Flash Baud or Monitor Baud in Board Tools → Device to open the corresponding VS Code setting. To set these values in Workspace Settings (JSON), merge the keys below with the existing settings.
 
 ```
 {
@@ -354,33 +373,43 @@ Add the following keys to Workspace Settings as needed, retaining the project's 
 }
 ```
 
-neonMdf.gt32u2086FlashBaudRate must match the board's ROMCODE baud rate. neonMdf.baudRate is the application/monitor baud rate and may differ from the programming baud rate. The example values of 19200 apply when both ROMCODE and the application use 19200 baud.
+Flash Baud must match the baud rate configured in the board ROMCODE. Monitor Baud follows the application UART. Both settings default to 19200, and the Printf_Log console uses 19200 baud, 8N1 by default. Set each rate for its own stage.
 
 ### Building and Configuring with menuconfig {#ch03_building_and_configuring_with_menuconfig}
 
-Run NEON-MDF: Build to configure when needed and build the selected preset. Check that build/GT32U2086/printf_log_image.bin exists. Use NEON-MDF: menuconfig to enable or disable drivers; keep UART enabled when the application uses printf. Reconfigure and rebuild after changing sdkconfig.
+Choose Board Tools → Actions → Build. The extension runs CMake configure with \--fresh and builds the selected application. For a normal, unsigned Printf_Log build, look for build/GT32U2086/printf_log_image.bin inside examples/Printf_Log. If configuration fails, use the task Terminal to identify the missing tool, interpreter or package.
+
+CMake, Ninja and the Arm toolchain must be on the VS Code host PATH. The extension preserves an explicitly configured Python3_EXECUTABLE. Otherwise it looks for .venv in the application, workspace or SDK checkout. If CMake selects the wrong Python, run the following command from examples/Printf_Log, substituting the path to the interpreter where you installed the requirements.
+
+```
+cmake --preset GT32U2086 --fresh "-DPython3_EXECUTABLE=/path/to/neon_mdf/.venv/bin/python"
+```
+
+On Windows, use the path to .venv/Scripts/python.exe, for example C:/work/neon_mdf/.venv/Scripts/python.exe. Run Build again after configuring.
+
+Choose Board Tools → Actions → Menuconfig to change project settings. Save and exit the terminal UI, then run Build. The saved sdkconfig settings apply to the next build. For an FPGA with a clock other than 10 MHz, set the actual Printf_Log clock as described in Section 1.5.
 
 ### Programming Firmware over UART {#ch03_programming_firmware_over_uart}
 
-1\. Select boot mode 100 on the board. Close external terminals or monitors holding the serial port.
+1\. Connect TX to RX, RX to TX and share GND as shown in Section 3.2. Verify the selected port and close any external tool that holds it. Select boot mode 100 on the board. UART programming uses the normal image profile.
 
-2\. Run NEON-MDF: Flash or NEON-MDF: Build + Flash + Log. The extension closes its own monitor, passes the port and baud rate when invoking flash_uart_gt32u2086, and displays the tool in the Terminal. The GT32U2086 UART workflow does not require OpenOCD.
+2\. Choose Board Tools → Actions → Flash via UART to build and program the selected application. Choose Build + Flash + Log to open the monitor after programming as well. The extension releases its own monitor during programming and runs the flash_uart_gt32u2086 CMake target in the Terminal.
 
 3\. Check the tool version, image profile, port, and baud rate in the banner. Wait for [WAIT] UART is ready, then press RESET on the board.
 
-4\. Wait for [PASS] Image transfer completed. ROMCODE transfers control to the application. Build + Flash + Log opens the monitor after successful programming; to capture startup again, select mode 000 and reset while the monitor is open.
+4\. Wait for [PASS] Image transfer completed. Switch to boot mode 000 for subsequent starts. To capture the full startup log, open the monitor before resetting the board in mode 000.
 
-Keep mode 000 selected for subsequent boots from internal Flash. For each UART update, select mode 100 again and repeat the wait-for-tool/reset sequence.
+For each later UART update, select mode 100 again and press RESET when the tool is ready.
 
 ### Monitoring Serial Output {#ch03_monitoring_serial_output}
 
-Run NEON-MDF: Serial Monitor; data appears in Output → NEON-MDF Serial Monitor. Reopen the monitor after changing its baud rate. Only one program should hold the port at a time; close external monitors before programming. For examples requiring bidirectional communication, use a suitable terminal; miniterm separately requires pyserial.
+Choose Board Tools → Actions → Serial Monitor and look for the NEON-MDF Serial Monitor tab in the Terminal panel. Printf_Log should show [INFO] NEON MDF printf ready and increasing counter values. For interactive examples, type the documented command, such as r or Enter, into the monitor. Reopen the terminal after changing the monitor baud. Close the terminal to release the port.
 
 ### Creating a Project and Debugging {#ch03_creating_a_project_and_debugging}
 
-Run NEON-MDF: Tao App Moi..., select the name, bare-metal or FreeRTOS template, and destination. Open the new project, select GT32U2086, and follow the same build and programming procedure. Chapter 2 covers GT32U2086 application requirements; Chapter 4 covers project templates and application module organization.
+Run NEON-MDF: Create New App..., select the name, bare-metal or FreeRTOS template, and destination. Open the new project, select GT32U2086, and follow the same build and programming procedure. Chapter 2 covers GT32U2086 application requirements; Chapter 4 covers project templates and application module organization.
 
-JTAG programming/debugging requires the correct adapter configuration, target configuration, and Flash driver for the GT32U2086 board. The current GT32U2086 OpenOCD configuration does not provide a working programming/debugging workflow; use UART for the procedures in this guide. The Debug command does not replace the ROMCODE UART programming service.
+Debug starts a Cortex-Debug attach session using a cortex-debug configuration with request set to attach in .vscode/launch.json. For JTAG, install Cortex-Debug and provide a verified adapter and board configuration. See guide/VSCode.md in the SDK for a launch.json example. The OpenOCD configuration shipped with the SDK is a placeholder.
 
 | Issue | Resolution |
 |:---|:---|
@@ -389,3 +418,9 @@ JTAG programming/debugging requires the correct adapter configuration, target co
 | Serial port is busy | Close monitors or terminals outside the extension. The extension closes its own monitor before programming. |
 | Application output contains unreadable characters | Check neonMdf.baudRate and the application's UART configuration; do not assume the programming baud rate is also the monitor baud rate. |
 | Old programming instructions still appear | Reinstall the updated VSIX, run Reload Window, and check that the correct SDK path is selected. |
+| NEON-MDF commands unavailable | Check that the VSIX is enabled in the current VS Code window, the workspace is trusted and the opened folder contains an SDK application. In Remote SSH, check SSH: Installed. |
+| CMake or arm-none-eabi-gcc cannot be found | Check PATH on the workspace host and restart VS Code after changing it. Verify the tools using the commands in Section 1.4. |
+| Python reports missing modules | Check the Python executable reported by CMake. Install neon-mdf/tools/requirements.txt into that environment or select the correct interpreter. |
+| Serial port missing or permission denied | Check adapter recognition and serial permissions on the workspace host. On Ubuntu/Debian, confirm membership in the device group, commonly dialout, and sign out and back in after changes. |
+| Upload waits for bootloader | Check wiring, boot mode 100 and Flash Baud. Reset after the Terminal reports that UART is ready. |
+| Upload rejects an XIP image | Configure the application with NEON_MDF_PROFILE=normal before using UART Flash. Section 10.3 covers external Flash. |

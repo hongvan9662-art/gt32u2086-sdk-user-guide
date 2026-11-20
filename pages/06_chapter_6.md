@@ -69,7 +69,7 @@ cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-4\. Program build/GT32U2086/adc_sampling_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Samples must change with the input; check endpoint values and saturation.
+4\. Program build/GT32U2086/gt32u2086_adc_sampling_image.bin and press r at fpga:&gt;&gt;. The example reads batches of 1, 4 and 16 samples, checks range 0..4095, and prints values, minimum, maximum and average. Compare against the applied analog input.
 
 Integrating into Your Application:
 
@@ -85,7 +85,7 @@ If samples are missing, check the analog signal, clock/reset, channel, sample_co
 
 ## 6.2 DMA {#ch06_dma}
 
-Header: dma/neon_dma.h. GT32U2086 uses native FTEL DMA with 8 channels and command registers; it does not execute PL330 programs. Enable the DMA instance clock and deassert reset before use. Source/destination addresses must be 4-byte aligned; byte_count must be divisible by 4 and no greater than 1020 bytes per call.
+GT32U2086 uses native FTEL DMA with eight channels per controller and command registers, not PL330 programs. Enable the instance clock and release reset through CRM before use. Source/destination must be word-aligned; byte_count must be divisible by four and at most 1020 per memcpy call.
 
 ```c
 neon_status_t neon_dma_memcpy(
@@ -94,51 +94,11 @@ neon_status_t neon_dma_memcpy(
     uint32_t timeout_cycles);
 ```
 
-timeout_cycles is a polling budget; 0 waits indefinitely. A timeout does not automatically abort an active channel. Do not return the buffer to the CPU or another task immediately on NEON_TIMEOUT. Confirm completion or recover the channel according to driver/hardware requirements before reuse. Split larger blocks into valid batches and manage both buffers' lifetimes.
+timeout_cycles is a polling budget; 0 waits indefinitely. Timeout does not abort an active channel. Confirm completion/bus retirement or perform the documented hardware recovery before reusing buffers. start_channel already starts the command; do not fire it again in the normal sequence.
 
-### Integration Procedure {#ch06_integration_procedure_2}
+### Memory Copy Integration {#ch06_memory_copy_integration}
 
-Examples: examples/DMA_Memory_Copy.
-
-1\. Enable CONFIG_NEON_MDF_DRIVER_DMA=y, include dma/neon_dma.h, and enable the DMA instance clock/deassert reset through CRM.
-
-2\. Reserve a channel and allocate source/destination storage as uint32_t. Addresses must be 4-byte aligned; the byte count must be divisible by 4 and no greater than 1020 bytes per transfer.
-
-3\. Use neon_dma_memcpy for memory-to-memory copies. For separate control, neon_dma_start_channel configures and starts the channel; then call neon_dma_wait_channel. Do not call fire_channel again after start_channel in the normal sequence.
-
-4\. Do not modify source/destination data while DMA owns the buffers. After completion, compare destination and source using word accesses or suitable runtime memcpy/memcmp functions.
-
-5\. A timeout does not mean that the channel has stopped. Confirm completion or perform recovery before returning buffers to the CPU or another task.
-
-### DMA_Memory_Copy {#ch06_dma_memory_copy}
-
-Objective: copy RAM data using DMA.
-
-1\. Hardware/storage: two uint32_t source/destination arrays with suitable capacity.
-
-2\. Required driver/configuration: CONFIG_NEON_MDF_DRIVER_DMA=y. Check CONFIG\_ selections in sdkconfig; keep UART enabled if logging is used. Select a channel and a byte_count divisible by 4, with a maximum of 1020 bytes per transfer.
-
-3\. From the repository root, open and build the example:
-
-```
-cd examples/DMA_Memory_Copy
-cmake --preset GT32U2086
-cmake --build --preset GT32U2086
-```
-
-4\. Program build/GT32U2086/dma_memory_copy_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Destination must match source after completion; test several data patterns.
-
-Integrating into Your Application:
-
-1\. Enable the DMA clock and deassert reset, reserve a channel, and call neon_dma_memcpy.
-
-2\. Put large-block splitting and ownership management in the application module; check each transfer's status.
-
-3\. Verify data after completion and handle timeout without overwriting buffers still used by DMA.
-
-### Troubleshooting {#ch06_troubleshooting_2}
-
-Check that source/destination addresses are 4-byte aligned, byte_count is divisible by 4, and each transfer stays within the size limit. Timeout does not confirm that the channel has stopped. Reuse buffers only after completion is confirmed or the channel has been recovered. Do not call fire_channel again after start_channel in the normal sequence.
+No standalone DMA_Memory_Copy application is shipped. Create an application using dma/neon_dma.h, allocate aligned uint32_t source/destination buffers, reserve a channel, call neon_dma_memcpy and compare words after successful completion. Split larger blocks into valid batches. SPI_DMA and I2C_DMA provide peripheral integration examples.
 
 ## 6.3 RTC and WDT {#ch06_rtc_and_wdt}
 
@@ -148,7 +108,7 @@ WDT init/config enables the clock and starts the watchdog automatically. timeout
 
 CRM manages peripheral clocks/resets and reports the reset source. SYSCSR exposes boot/CPU information and controls selected sleep/debug signals and multiplexers. The application manages system sleep/wake sequencing according to the board design.
 
-### Integration Procedure {#ch06_integration_procedure_3}
+### Integration Procedure {#ch06_integration_procedure_2}
 
 Examples: examples/RTC_Calendar.
 
@@ -178,7 +138,7 @@ cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-4\. Program build/GT32U2086/rtc_calendar_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Time must advance and the date must change correctly at the tested boundary.
+4\. Program build/GT32U2086/gt32u2086_rtc_calendar_image.bin and press r. Menu 1 checks set/get, 2 checks five second increments, 3 checks minute/leap-day/year rollover, and 4 checks valid/invalid dates. q or Ctrl+C exits. Match CONFIG_RTC_CALENDAR_PRESCALER to the RTC source; the example default is 360.
 
 Integrating into Your Application:
 
@@ -194,7 +154,7 @@ Enable CONFIG_NEON_MDF_DRIVER_WDT=y, include wdt/neon_wdt.h, obtain defaults, an
 
 Test both cases: refresh during normal operation; then deliberately stop refreshing and verify the interrupt/reset selected by the mode. After the next boot, read the reset source through CRM to identify a watchdog reset. timeout_range is a TOP encoding, not milliseconds.
 
-### Troubleshooting {#ch06_troubleshooting_3}
+### Troubleshooting {#ch06_troubleshooting_2}
 
 For RTC, check clock/reset and valid date/time fields; the public API accepts decimal values, not encoded BCD. For WDT, check refresh placement and interrupt/reset mode. A task that can still refresh the watchdog does not prove that the whole application is functioning correctly.
 
@@ -206,7 +166,7 @@ Flash_Read_Write supports only the normal profile. It reserves the 512-byte sect
 
 NVR stores security records governed by ROM policy, separate from application configuration data. Do not use the old eFuse/OTP map to store serial numbers or keys. Locking, slot issuance, and bank erasure must follow a production process appropriate for the revision.
 
-### Integration Procedure {#ch06_integration_procedure_4}
+### Integration Procedure {#ch06_integration_procedure_3}
 
 Examples: examples/Flash_Read_Write.
 
@@ -236,7 +196,7 @@ cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-4\. Program build/GT32U2086/flash_read_write_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Readback must match the programmed pattern. The example modifies the test sector.
+4\. Program build/GT32U2086/gt32u2086_flash_read_write_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Readback must match the programmed pattern. The example modifies the test sector.
 
 Integrating into Your Application:
 
@@ -246,61 +206,35 @@ Integrating into Your Application:
 
 3\. Keep application configuration in its reserved data area and define an application data update procedure.
 
-### Troubleshooting {#ch06_troubleshooting_4}
+### Troubleshooting {#ch06_troubleshooting_3}
 
 If verification fails, check that the sector was erased, addresses are word-aligned, and each operation returned the expected status. Reserve the data region in the linker script so firmware growth cannot overlap it. Keep the SDK's Flash/reset support code and device configuration unchanged when testing application data writes.
 
-## 6.5 QSPI Indirect Mode {#ch06_qspi_indirect_mode}
+## 6.5 QSPI Indirect and Memory-Mapped Reads {#ch06_qspi_indirect_and_memory_mapped_reads}
 
-The QSPI driver exposes get_default_config, init, deinit, send_command, write_data, read_data, and wait_ready through the APB window. Initialization enables its clock, releases reset, and configures AUTO pad/mux routing. Configuration uses mode 0/SDR and returns BUSY during an active transfer. Use KEEP for existing board routing; DeInit restores the saved AUTO pad/mux bits.
+Use QSPI_APB through qspi/neon_qspi.h. Initialization handles clock/reset and AUTO routing. Select command/address/data widths, dummy cycles and the NOR protocol. Wait for controller completion and the NOR WIP state separately. Current APIs do not implement DDR, DMA or automatic status polling.
 
-Indirect mode handles commands/data through the driver and is separate from the XIP link/boot profile. Use QSPI_Flash_Indirect with the opcode, address, dummy cycles, and erase/program sequence required by the board's Flash device.
-
-### Integration Procedure {#ch06_integration_procedure_5}
-
-Examples: examples/QSPI_Flash_Indirect.
-
-1\. Enable CONFIG_NEON_MDF_DRIVER_QSPI=y and include qspi/neon_qspi.h. The init function handles clock/reset release and default pad/mux routing.
-
-2\. Call neon_qspi_get_default_config, set clock_divider, and call neon_qspi_init. Select opcode, address/data line widths, dummy cycles, and data length for the Flash device.
-
-3\. Call neon_qspi_send_command to start a transaction; use neon_qspi_read_data/neon_qspi_write_data during its data phase according to the example's sequence.
-
-4\. Call neon_qspi_wait_ready at the appropriate transaction boundaries. For erase/program operations, check the Flash device's own status before issuing the next command.
-
-5\. Use a dedicated external Flash test region and compare readback data. The indirect driver does not switch the application to XIP automatically.
-
-### QSPI_Flash_Indirect {#ch06_qspi_flash_indirect}
-
-Objective: exchange commands and data with external Flash.
-
-1\. Hardware: board-supported QSPI Flash; select a test region outside data that must be preserved.
-
-2\. Required driver/configuration: CONFIG_NEON_MDF_DRIVER_QSPI=y. Check CONFIG\_ selections in sdkconfig; keep UART enabled if logging is used. Set the opcode, number of lines, address, and dummy cycles for the Flash device.
-
-3\. From the repository root, open and build the example:
+### QSPI_Flash_Read_Write {#ch06_qspi_flash_read_write}
 
 ```
-cd examples/QSPI_Flash_Indirect
+cd examples/QSPI_Flash_Read_Write
 cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-4\. Program build/GT32U2086/qspi_flash_indirect_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Verify device identification and test data readback after erase/program operations performed by the example.
+Program build/GT32U2086/gt32u2086_qspi_flash_read_write_image.bin and press r. This normal-profile application exercises indirect Single/Dual/Quad NOR commands. Use the README menu and supported JEDEC/protocol settings.
 
-Integrating into Your Application:
+### QSPI_XIP_Read {#ch06_qspi_xip_read}
 
-1\. Enable the clock, deassert reset, configure pins, and call neon_qspi_init.
+```
+cd examples/QSPI_XIP_Read
+cmake --preset GT32U2086
+cmake --build --preset GT32U2086
+```
 
-2\. Call send_command, then read_data/write_data; wait for the controller and Flash status at the correct transaction boundaries.
+Program build/GT32U2086/gt32u2086_qspi_xip_read_image.bin and press r. The application runs in internal Flash, programs an original test pattern, then compares memory-mapped reads against that pattern. It is not a boot-from-QSPI demonstration. Both QSPI tests reject the xip build profile.
 
-3\. Encapsulate commands in app_flash_ext; the indirect driver does not configure XIP boot automatically.
-
-### Troubleshooting {#ch06_troubleshooting_5}
-
-If device identification or data cannot be read, check routing, opcode, address/data line widths, dummy cycles, and transaction boundaries. Check the external Flash busy status after erase/program. This example runs with the normal profile; the UART programming workflow in Section 3.2 does not program firmware into QSPI Flash.
-
-When the application itself executes from QSPI XIP, keep the controller and Flash in the boot-established memory-mapped mode. A normal indirect-mode init/reset or erase of the executable Flash region can interrupt instruction fetch. Use a normal-profile application for indirect Flash tests.
+The default external scratch sector is offset 0x0003C000..0x0003CFFF; a write test erases the full 4 KiB sector. Reserve it outside existing images/data. No QSPI_Flash_Indirect project is shipped. Never reset/reconfigure or erase a QSPI device while instructions/constants are fetched from it.
 
 ## 6.6 CRC, AES, and TRNG {#ch06_crc_aes_and_trng}
 
@@ -312,7 +246,7 @@ When the application itself executes from QSPI XIP, keep the controller and Flas
 
 The public AES API supports AES-128 ECB/CBC/CTR block processing. Applications must manage message authentication, keys, and protocol state according to their requirements. The CRC API described here provides CRC-8 for application data.
 
-### Integration Procedure {#ch06_integration_procedure_6}
+### Integration Procedure {#ch06_integration_procedure_4}
 
 Examples: examples/CRC_Known_Vector, examples/AES_Known_Vector, examples/TRNG_Read.
 
@@ -342,7 +276,7 @@ cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-4\. Program build/GT32U2086/crc_known_vector_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. The calculated CRC must match the known result; modify some input data to verify mismatch detection.
+4\. Program build/GT32U2086/gt32u2086_crc_known_vector_image.bin, press r, then a to run all six checks (or 1..6 individually). q or Ctrl+C exits. Length counts 32-bit words, with every bit consumed MSB first; the polynomial is 0x07, with zero init/xor-out and no reflection.
 
 Integrating into Your Application:
 
@@ -368,7 +302,7 @@ cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-4\. Program build/GT32U2086/aes_known_vector_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. The output block must match the known result. Repeat after changing configuration to check that previous state does not persist.
+4\. Program build/GT32U2086/gt32u2086_aes_known_vector_image.bin and press r. Both ECB encrypt and decrypt must match the FIPS-197 Appendix C.1 vector. CBC/CTR APIs exist but are not exercised by this example.
 
 Integrating into Your Application:
 
@@ -394,7 +328,7 @@ cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-4\. Program build/GT32U2086/trng_read_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Verify successful word reads and status; individual calls have no fixed expected value.
+4\. Program build/GT32U2086/gt32u2086_trng_read_image.bin and press r. The test attempts 16 bounded reads and digital LFSR BIST. On an FPGA without analog entropy, PASS (Timeout Path) checks clean timeout handling; it does not prove random-data availability or entropy quality.
 
 Integrating into Your Application:
 
@@ -404,6 +338,6 @@ Integrating into Your Application:
 
 3\. Provide an application-level random-source API to coordinate multiple tasks and handle errors.
 
-### Troubleshooting {#ch06_troubleshooting_6}
+### Troubleshooting {#ch06_troubleshooting_4}
 
 For CRC/AES, use the correct test vectors and byte/word ordering. Serialize AES configuration, key/IV setup, and the entire transaction between tasks. For TRNG, check status and timeout; random data has no fixed expected value.

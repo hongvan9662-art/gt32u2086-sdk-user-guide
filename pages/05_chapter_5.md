@@ -75,7 +75,7 @@ Integrating into Your Application:
 
 Objective: read an input to control an output.
 
-1\. Hardware: a button from PB5 to GND, a suitable pull-up, and an LED/output on PB1 as configured in the example.
+1\. Hardware: a button from PB5 to GND, a suitable pull-up, and an LED/output on PB7 as configured in the example.
 
 2\. Required driver/configuration: GPIO. Check CONFIG\_ selections in sdkconfig; keep UART enabled if the example logs output. Check input/output pins, pull configuration, and active levels; enable UART to observe state changes.
 
@@ -87,7 +87,7 @@ cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-4\. Program build/GT32U2086/gpio_input_output_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Pressing the button activates the output; releasing it returns the output to its idle level. Check for contact bounce when using a mechanical button.
+4\. Program build/GT32U2086/gt32u2086_gpio_input_output_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Pressing the button activates the output; releasing it returns the output to its idle level. Check for contact bounce when using a mechanical button.
 
 Integrating into Your Application:
 
@@ -113,7 +113,7 @@ cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-4\. Program build/GT32U2086/gpio_interrupt_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Each valid edge increments the counter; main or a task reports the updated state. Test button bounce separately.
+4\. Program build/GT32U2086/gt32u2086_gpio_interrupt_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Each valid edge increments the counter; main or a task reports the updated state. Test button bounce separately.
 
 Integrating into Your Application:
 
@@ -203,7 +203,7 @@ cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-4\. Program build/GT32U2086/uart_echo_polling_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Each character sent by the host must be echoed exactly once; check RX/TX counters and errors.
+4\. Program build/GT32U2086/gt32u2086_uart_echo_polling_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Each character sent by the host must be echoed exactly once; check RX/TX counters and errors.
 
 Integrating into Your Application:
 
@@ -229,7 +229,7 @@ cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-4\. Program build/GT32U2086/uart_rx_interrupt_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Received data must remain in order and be processed by main or a task without losing bytes at the intended input rate.
+4\. Program build/GT32U2086/gt32u2086_uart_rx_interrupt_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Received data must remain in order and be processed by main or a task without losing bytes at the intended input rate.
 
 Integrating into Your Application:
 
@@ -245,11 +245,23 @@ For unreadable logs, check baud rate/frame format, UART routing, and GND. Echo t
 
 For an RX ISR, neon_uart_try_receive reads one available value without waiting; store it in word-backed software buffering and process/log it in main. neon_uart_wait_tx_complete waits for transmission to finish on the wire before reset or configuration changes.
 
+### UART_DMA {#ch05_uart_dma}
+
+```
+cd examples/UART_DMA
+cmake --preset GT32U2086
+cmake --build --preset GT32U2086
+```
+
+Program gt32u2086_uart_dma_image.bin from build/GT32U2086/ and press r at fpga:&gt;&gt;. t sends 64 characters; r arms reception, after READY paste exactly 0123456789ABCDEF without Enter. q/Ctrl+C exits when no transfer is active.
+
+The current example retains one character per uint32_t and a four-byte peripheral access. This profile and timeout recovery still need completion against the byte-oriented USART DMA hardware contract. Build success does not establish valid hardware DMA behavior.
+
 ## 5.3 Hardware Timers and PWM {#ch05_hardware_timers_and_pwm}
 
 The TIM API provides two counter channels, CH0/CH1. The main sequence is get_default_config → init(instance, channel) → configure reload/prescaler/interrupts → start. PWM uses TIM_TypeDef with get_default_config, init, set_period, set_pulse, and start/stop. PWM AUTO routes channel 0 to the default package pad; channel 1 requires KEEP because no default package route is defined.
 
-TIM status registers are read-only and read-to-clear: STT_CH0 at offset 0x4C and STT_CH1 at offset 0x50. neon_tim_get_active_flags takes one snapshot and acknowledges the entire channel; process all sources in that snapshot. Do not call neon_tim_clear_flag after reading status. neon_tim_clear_flag discards/acknowledges the entire channel even when a valid mask is supplied. PWM uses the same acknowledgment behavior.
+On the current FPGA backend, STT_CH0 at 0x4C and STT_CH1 at 0x50 report read-only live event state. Reading flags does not clear them or acknowledge an IRQ. UPDATE drops when the counter leaves the reload condition. neon_tim_clear_flag and neon_pwm_clear_flags return NEON_NOT_SUPPORTED. Do not write STT; verify event duration and level-IRQ behavior on the actual bitstream.
 
 TIM_Periodic_Interrupt uses TIM1 and output PB7; PWM_Output uses TIM0_CH0 as configured by the example. Coordinate ownership when two functions share a channel.
 
@@ -261,7 +273,7 @@ Examples: examples/TIM_Periodic_Interrupt, examples/PWM_Output.
 
 2\. TIM: obtain defaults, select normal mode, and configure reload/interrupts as shown in the example. Call neon_tim_init and configure the NVIC before neon_tim_start.
 
-3\. In the TIM handler, call neon_tim_get_active_flags once and process all returned flags. Do not reread status for individual bits or clear again after a read-to-clear operation.
+3\. Read the relevant live flags in the TIM handler. The periodic example bounds its wait for UPDATE to drop; a stuck level disables the IRQ so main can report the fault and clean up. Keep logs outside the ISR.
 
 4\. PWM: obtain defaults, select period/pulse and channel 0, then call neon_pwm_init and neon_pwm_start. AUTO handles pad/mux setup; use KEEP only for board-managed routing. Change duty cycle with neon_pwm_set_pulse.
 
@@ -283,7 +295,7 @@ cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-4\. Program build/GT32U2086/tim_periodic_interrupt_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. The handler records events and the output changes with timer activity; verify with measurement equipment.
+4\. Program build/GT32U2086/gt32u2086_tim_periodic_interrupt_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. The handler records events and the output changes with timer activity; verify with measurement equipment.
 
 Integrating into Your Application:
 
@@ -309,7 +321,7 @@ cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-4\. Program build/GT32U2086/pwm_output_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Verify the PWM waveform and confirm that changing pulse changes the duty cycle.
+4\. Program build/GT32U2086/gt32u2086_pwm_output_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Verify the PWM waveform and confirm that changing pulse changes the duty cycle.
 
 Integrating into Your Application:
 
@@ -321,87 +333,25 @@ Integrating into Your Application:
 
 ### Troubleshooting {#ch05_troubleshooting_3}
 
-If events or waveforms are missing, check instance/channel, interrupt sources, and output routing. Read TIM/PWM status once according to its read-to-clear behavior; do not clear again after the snapshot. Keep period/pulse values valid, verify them with measurement equipment, and avoid shared-channel conflicts.
+If events or waveforms are missing, check instance/channel, clock, source enables and routing. Current FPGA TIM/PWM flags are live, not read-to-clear; software clear is unsupported. Measure the waveform and UPDATE duration and avoid shared-channel conflicts.
 
 ## 5.4 I²C Interface {#ch05_i_c_interface}
 
-I²C uses a handle: obtain defaults, initialize NEON_I2C0, call set_config, then master_transmit/master_receive or mem_read/mem_write. The API supports interrupts, slave status, bus recovery, and DMA configuration. Check address conventions, bus speed, pull-ups, and pin multiplexing in the public header/backend before connecting a sensor. Do not use another sensor's address as a default.
+The driver provides master/slave polling, interrupt/status, memory transfers, DMA requests and recovery APIs. Call get_default_config, neon_i2c_init(NEON_I2C0), then set_config; use an unshifted device address. Verify external pull-ups, pin mux and timing.
 
-Examples: I2C_Register_Read_Write, I2C_Slave, and I2C_DMA.
+### I2C_EEPROM {#ch05_c_eeprom}
 
-1\. Enable CONFIG_NEON_MDF_DRIVER_I2C=y and include i2c/neon_i2c.h. Connect SDA/SCL and pull-ups at the correct board voltage.
-
-2\. Create a neon_i2c_handle_t, obtain defaults, and select master/slave and addressing mode. Call neon_i2c_init with NEON_I2C0, then neon_i2c_set_config.
-
-3\. In master mode, pass the unshifted address to master_transmit/master_receive or mem_read/mem_write. Set the correct register address, byte count, and timeout; use word storage for RAM buffers.
-
-4\. In slave mode, set own_address and use slave_receive/slave_transmit. Both ends must agree on the address and transfer direction.
-
-5\. For DMA, include dma/neon_dma.h, enable DMA, and use the channel/handshake settings from I2C_DMA. Call neon_i2c_configure_dma for TX/RX; return buffer ownership to the CPU only after all relevant operations complete.
-
-6\. Check NACK, arbitration errors, and bus-busy conditions through status and neon_i2c_get_error. Deinitialize only when no transfer or task still uses the bus.
-
-### I2C_Register_Read_Write {#ch05_c_register_read_write}
-
-Objective: read and write registers on an I²C device.
-
-1\. Hardware: an I²C device with accessible registers, SDA/SCL pull-ups, and a common GND.
-
-2\. Required driver/configuration: CONFIG_NEON_MDF_DRIVER_I2C=y. Check CONFIG\_ selections in sdkconfig; keep UART enabled if logging is used. Set the unshifted device address, addressing mode, register, and byte count for the device.
-
-3\. From the repository root, open and build the example:
+The standalone project uses the attached EEPROM configuration documented in examples/I2C_EEPROM/README.md. Select its device address, memory-address width and test region for the actual EEPROM; writes replace that test data.
 
 ```
-cd examples/I2C_Register_Read_Write
+cd examples/I2C_EEPROM
 cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-4\. Program build/GT32U2086/i2c_register_read_write_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Read the device identification register or verify the value written to a test register.
-
-Integrating into Your Application:
-
-1\. Initialize the handle using init/set_config; keep device-specific information in app_sensor/app_device.
-
-2\. Call mem_read/mem_write with word-backed buffers and valid byte counts. Do not write read-only registers or access registers with unintended side effects.
-
-3\. Handle NACK, bus busy, and timeout; protect the bus when shared by multiple tasks.
-
-### I2C_Slave {#ch05_c_slave}
-
-Objective: exchange data with GT32U2086 acting as an I²C slave.
-
-1\. Hardware: an external master, SDA/SCL with pull-ups, and a common GND.
-
-2\. Required driver/configuration: CONFIG_NEON_MDF_DRIVER_I2C=y. Check CONFIG\_ selections in sdkconfig; keep UART enabled if logging is used. Select slave mode and own_address; the master must use the same address and message format.
-
-3\. From the repository root, open and build the example:
-
-```
-cd examples/I2C_Slave
-cmake --preset GT32U2086
-cmake --build --preset GT32U2086
-```
-
-4\. Program build/GT32U2086/i2c_slave_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Verify correct master transmit/receive behavior with both write and read transactions.
-
-Integrating into Your Application:
-
-1\. Initialize the slave handle and RX/TX buffers; call slave_receive/slave_transmit from a suitable execution context.
-
-2\. Separate the message protocol from the driver; define message lengths and when TX data may be updated.
-
-3\. Report status/errors to the application; do not share a buffer between an unfinished transfer and unrelated processing.
+Program build/GT32U2086/gt32u2086_i2c_eeprom_image.bin, then press r at fpga:&gt;&gt;. Check returned status and written/read-back data. Handle NACK, bus busy and timeout through the documented driver contract.
 
 ### I2C_DMA {#ch05_c_dma}
-
-Objective: transfer I²C data with DMA.
-
-1\. Hardware: an I²C device and connections already verified by polling; reserve a DMA channel.
-
-2\. Required driver/configuration: CONFIG_NEON_MDF_DRIVER_I2C=y and CONFIG_NEON_MDF_DRIVER_DMA=y. Check CONFIG\_ selections in sdkconfig; keep UART enabled if logging is used. Retain the example's request/channel mapping; byte counts and buffers must meet DMA word-access requirements.
-
-3\. From the repository root, open and build the example:
 
 ```
 cd examples/I2C_DMA
@@ -409,19 +359,11 @@ cmake --preset GT32U2086
 cmake --build --preset GT32U2086
 ```
 
-4\. Program build/GT32U2086/i2c_dma_image.bin as described in Section 3.2. Select mode 000, open the monitor as instructed by the README, and reset to observe startup again. Data must be transferred correctly, with buffer processing resuming only after completion.
+Enable I2C and DMA, program gt32u2086_i2c_dma_image.bin from build/GT32U2086/, then press r. Preserve the source example channel/request configuration and word-backed buffers. Wait for bus and DMA completion before reuse.
 
-Integrating into Your Application:
+### Slave Integration {#ch05_slave_integration}
 
-1\. Verify polling-based I²C transfers first, then add DMA configuration and neon_i2c_configure_dma to the module.
-
-2\. Use the correct TX/RX direction, peripheral request, and application buffer addresses; do not reuse a busy channel.
-
-3\. Wait for both bus and DMA completion; handle timeout without assuming the channel aborts automatically.
-
-### Troubleshooting {#ch05_troubleshooting_4}
-
-For NACK or bus busy, check SDA/SCL pull-ups, the unshifted address, master/slave mode, and slave readiness. Confirm the device's register-address width. For DMA, check handshake/channel settings and process data only after both I²C and DMA complete.
+No standalone I2C_Slave or I2C_Register_Read_Write project is shipped. To use slave mode, create an application, set own_address/mode, and call slave_receive/slave_transmit from task/main context. Verify reads/writes with an external master. Keep message lengths and buffer ownership explicit.
 
 ## 5.5 SPI Interface {#ch05_spi_interface}
 
@@ -429,7 +371,7 @@ SPI uses SPI0/SPI1 and neon_spi_config_t. The polling APIs support legacy 8/16/2
 
 The number of elements passed to a \*\_words API is a word/frame count at the current SPI data width. Byte-buffer APIs require 8-bit SPI frames. Use aligned word-backed RAM for both. neon_spi_set_data_width changes the frame width while idle without resetting the controller, allowing a header/payload sequence with manual SS hold.
 
-### SPI_W5500 in FPGA_Terminal {#ch05_spi_w5500_in_fpga_terminal}
+### SPI_W5500 {#ch05_spi_w5500}
 
 Objective: identify W5500 and verify SPI register read/write and a 32-byte SRAM burst. This testcase uses SPI0, mode 3, MSB first, hardware SS0, and an initial SCK of 1 MHz at the default 10-MHz FPGA clock. No IP, socket, or Ethernet packet setup is performed; a LAN cable is not required.
 
@@ -441,15 +383,15 @@ Objective: identify W5500 and verify SPI register read/write and a 32-byte SRAM 
 | SS0 / IO0 / package 63 | CS / SCSn |
 | GND and module supply | Connect common GND; supply the module correctly and ensure RSTn reaches HIGH. SPI logic is 3.3 V; INTn is unused. |
 
-Build the terminal application; SPI_W5500 is not a separate standalone project:
+Build the standalone SPI_W5500 project. After programming, open its UART terminal and press r without Enter at fpga:&gt;&gt;.
 
 ```
-cd examples/FPGA_Terminal
+cd examples/SPI_W5500
 cmake --preset GT32U2086 --fresh -DNEON_MDF_PROFILE=normal
 cmake --build --preset GT32U2086
 ```
 
-Enable CONFIG_NEON_MDF_DRIVER_SPI=y and UART logging. Program build/GT32U2086/fpga_terminal_image.bin with the normal UART workflow, open UART0 at 19200 baud/8N1, and enter spi_w5500. To build for QSPI XIP instead, select -DNEON_MDF_PROFILE=xip and use fpga_terminal_image_xip.bin through the external-Flash boot workflow.
+Enable CONFIG_NEON_MDF_DRIVER_SPI=y and UART logging. Program build/GT32U2086/gt32u2086_spi_w5500_image.bin, open UART0 at 19200/8N1 and press r at fpga:&gt;&gt;. For XIP firmware use its packaged \_image_xip.bin through a separate external-Flash programmer; ROM UART only updates internal Flash.
 
 At entry, the testcase waits 560 ms for module startup, reads VERSIONR at 0x0039 (expected 0x04), writes MR=0x80 for software reset, and polls MR back to zero. An init/ID failure leaves the menu available for diagnostics and retry. After READY, commands are single keys and do not require Enter.
 
@@ -470,10 +412,16 @@ The SRAM burst sends 00 00 10 followed by 32 dummy bytes. It uses a 32-bit heade
 
 SPI polling timeout resets the controller before another transaction; an incomplete burst is not dumped. The testcase uses an idle SysTick as a polled timebase for reset delays and auto, without enabling SysTick interrupts. Ctrl+C/q deinitializes SPI0 and restores the saved SysTick settings; the SPI driver restores its pad/mux bits.
 
-FPGA_Terminal also supports normal and XIP builds with flash_rw reserved at internal Flash sector 0x0009FE00. The XIP image resides in QSPI Flash; this command continues to test the separate internal-Flash scratch sector. Verify physical pin routing, CS timing, and returned data on the board.
+SPI_W5500 and Flash_Read_Write are independent applications. Flash_Read_Write reserves its internal scratch sector and supports only normal; the QSPI NOR tests also require normal because they reconfigure the executable external device.
 
-### SPI DMA Integration {#ch05_spi_dma_integration}
+### SPI_DMA {#ch05_spi_dma}
 
-The SPI_DMA terminal entry is a placeholder, not a completed DMA example. For application integration, first verify polling, enable the DMA driver, configure the DMA controller/channel/handshake, then configure the SPI DMA direction. total_bytes must be nonzero, at most 65535, and divisible by four. The driver configures a disabled channel, pulses CLEAR, then enables it. Re-arm only after completion; TX and RX are independent. Disable accepts a config containing only state=NEON_SPI_DMA_DISABLE.
+SPI_DMA is an implemented standalone application, not a terminal placeholder. It verifies SPI0/W5500 polling identification, writes 32 bytes to socket 0 TX SRAM by DMA and verifies them by polling, then reads by RX DMA while a separate TX channel supplies clocks.
 
-After a polling timeout, call Init or DeInit before another transfer. Keep application buffers owned until both SPI and DMA are complete. The driver adds a final-frame timing guard; FIFO empty alone is not proof that the last serial bit has left the wire. Coordinate SS/manual-hold and DMA settings with the device protocol.
+```
+cd examples/SPI_DMA
+cmake --preset GT32U2086
+cmake --build --preset GT32U2086
+```
+
+Program build/GT32U2086/gt32u2086_spi_dma_image.bin and press r. The test overwrites W5500 socket 0 TX offsets 0..31. A pass requires both data comparisons and transfer completion. Incomplete commands retain static buffers and park channels; reset is required before another run. Verify CS timing and DMA request routing on hardware.

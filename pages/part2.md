@@ -20,7 +20,7 @@
     - @ref ch06_dma
     - @ref ch06_rtc_and_wdt
     - @ref ch06_internal_flash
-    - @ref ch06_qspi_indirect_mode
+    - @ref ch06_qspi_indirect_and_memory_mapped_reads
     - @ref ch06_crc_aes_and_trng
 
 </div>

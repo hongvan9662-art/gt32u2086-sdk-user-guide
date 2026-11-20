@@ -24,7 +24,7 @@ GT32U2086 uses an Arm Cortex-M0 core for measurement, sensing, control, and peri
 | Clock and reset | 20 MHz reference clock input (OSC) for system PLL; 0.032 MHz (32 kHz) clock for RTC; 16 MHz TCLK for JTAG; Clock and reset management through CRM. |
 | Debug | JTAG debugging |
 
-The maximum CPU rating is 60 MHz. SystemCoreClock and any fixed FPGA clock configuration must describe the clock actually supplied by the board; the FPGA_Terminal example defaults to 10 MHz.
+The maximum CPU rating is 60 MHz. SystemCoreClock and a fixed FPGA clock setting must describe the actual board clock; peripheral examples normally describe a 10 MHz FPGA bitstream.
 
 ## 1.2 SDK Software Architecture {#ch01_sdk_software_architecture}
 
@@ -74,7 +74,7 @@ The neon-mdf directory contains the shared SDK; examples contains standalone app
     guide/                      # SDK documentation
 ```
 
-Standalone applications are organized under examples/. FPGA_Terminal also groups peripheral testcases in one UART command-line application. SPI_W5500 is provided under examples/FPGA_Terminal/testcase/SPI_W5500 and is launched with the spi_w5500 command.
+Standalone applications are organized under examples/. Each peripheral example has its own UART terminal and image. SPI_W5500 is a standalone project at examples/SPI_W5500; there is no FPGA_Terminal application in this checkout.
 
 ```
 examples/
@@ -87,12 +87,12 @@ examples/
     TIM_Periodic_Interrupt/
     PWM_Output/
     ADC_Sampling/
-    DMA_Memory_Copy/
+    SPI_DMA/
     ...
 ```
 
 ```
-    FPGA_Terminal/testcase/SPI_W5500/
+    SPI_W5500/
 ```
 
 A typical example has the following structure:
@@ -123,7 +123,7 @@ Open the correct example directory in VS Code or when running CMake. When switch
 
 Shell commands use Bash syntax. Relative paths are based on the repository root unless a step explicitly changes to the application directory.
 
-The tools directory contains the operational CLI, project templates, configuration/image generators, and flashing/monitoring tools. Separate tests and instruction-audit scripts are not included. Image-format, CRC, and signature handling remain part of packaging and programming.
+The tools directory contains operational build, project-template, image, signing and UART tools. SDK regression checks live with CI under .github/, outside the distributed tools workflow.
 
 ## 1.4 Required Tools and Environment Setup {#ch01_required_tools_and_environment_setup}
 
@@ -171,4 +171,17 @@ ninja --version
 python3 -c "import yaml, kconfiglib; print('Python OK')"
 ```
 
-Reactivate .venv before configuring or building in a new terminal. pyserial is required only for GT32U2086 programming on Windows, STM32 tools, CLI port autodetection, or terminals such as miniterm. The Linux/macOS GT32U2086 UART workflow does not require it when the port is specified explicitly.
+Reactivate .venv before configuring or building in a new terminal. Install neon-mdf/tools/requirements.txt with the interpreter CMake uses. pyserial is required for Windows UART, automatic port detection and terminals such as miniterm; explicit-port Linux/macOS UART uses the standard-library backend.
+
+## 1.5 Board Clock and Hardware Configuration {#ch01_board_clock_and_hardware_configuration}
+
+CMake 3.25+, Python 3.10+, Ninja and Arm GNU Toolchain are required. Install Python dependencies from neon-mdf/tools/requirements.txt. Record the board, bitstream, connector route and actual clock before running examples.
+
+Peripheral examples use CONFIG_GT32U2086_EXAMPLE_FIXED_CLOCK_HZ, normally 10000000. Printf_Log uses NEON_PRINTF_FIXED_CLOCK_HZ with the same default. New templates accept NEON_APP_FIXED_CLOCK_HZ; 0 uses CRM detection. A software frequency does not change the physical clock.
+
+```
+cmake --preset GT32U2086 -DNEON_APP_FIXED_CLOCK_HZ=10000000
+cmake --build --preset GT32U2086
+```
+
+Use the command above for a template on a known 10 MHz FPGA. Verify UART bit timing, TIM/PWM period and FreeRTOS tick after changing clocks. AUTO pin routes refer to package pins; confirm the actual FPGA/PMOD wiring. GPIO_Input_Output uses PB5 input and PB7 output.

@@ -6,7 +6,8 @@
   "Application Development with Neon MDF"
  ],
  "tagline": [
-  "Application development, peripheral APIs, FreeRTOS, and PC firmware programming"
+  "Application development, peripheral APIs, FreeRTOS, and PC firmware programming",
+  "User Guide v1.1 — Updated 20 November 2026. The device target, preset and CLI identifier are GT32U2086. This guide covers standalone applications in the accompanying Neon MDF SDK."
  ],
  "parts": [
   {
@@ -33,6 +34,10 @@
       {
        "title": "1.4 Required Tools and Environment Setup",
        "label": "ch01_required_tools_and_environment_setup"
+      },
+      {
+       "title": "1.5 Board Clock and Hardware Configuration",
+       "label": "ch01_board_clock_and_hardware_configuration"
       }
      ]
     },
@@ -156,8 +161,8 @@
        "label": "ch06_internal_flash"
       },
       {
-       "title": "6.5 QSPI Indirect Mode",
-       "label": "ch06_qspi_indirect_mode"
+       "title": "6.5 QSPI Indirect and Memory-Mapped Reads",
+       "label": "ch06_qspi_indirect_and_memory_mapped_reads"
       },
       {
        "title": "6.6 CRC, AES, and TRNG",
@@ -300,7 +305,11 @@
        "label": "ch10_boot_modes_and_external_flash"
       },
       {
-       "title": "10.4 Retrying an Interrupted or Failed Update",
+       "title": "10.4 Signed Firmware and NVR Policy",
+       "label": "ch10_signed_firmware_and_nvr_policy"
+      },
+      {
+       "title": "10.5 Retrying an Interrupted or Failed Update",
        "label": "ch10_retrying_an_interrupted_or_failed_update"
       }
      ]
@@ -323,6 +332,10 @@
       {
        "title": "11.2 Information to Include in an Issue Report",
        "label": "ch11_information_to_include_in_an_issue_report"
+      },
+      {
+       "title": "11.3 Build Checks and Board Acceptance",
+       "label": "ch11_build_checks_and_board_acceptance"
       }
      ]
     },

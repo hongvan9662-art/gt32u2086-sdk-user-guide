@@ -7,6 +7,7 @@
     - @ref ch01_sdk_software_architecture
     - @ref ch01_sdk_directory_structure_and_example_organization
     - @ref ch01_required_tools_and_environment_setup
+    - @ref ch01_board_clock_and_hardware_configuration
 - @subpage ch02
     - @ref ch02_aligned_32_bit_memory_access
 - @subpage ch03

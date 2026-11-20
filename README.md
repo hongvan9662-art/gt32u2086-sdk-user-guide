@@ -4,6 +4,8 @@
 
 Application development, peripheral APIs, FreeRTOS, and PC firmware programming
 
+User Guide v1.1 — Updated 20 November 2026. The device target, preset and CLI identifier are GT32U2086. This guide covers standalone applications in the accompanying Neon MDF SDK.
+
 <h2>Contents</h2>
 
 <div class="gt32u2086-cards">
