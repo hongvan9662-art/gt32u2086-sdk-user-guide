@@ -421,6 +421,15 @@ a.gt32u2086-read-all:hover, a.gt32u2086-read-all:active, a.gt32u2086-read-all:fo
 }
 html.dark-mode a.gt32u2086-read-all:hover, html.dark-mode a.gt32u2086-read-all:active, html.dark-mode a.gt32u2086-read-all:focus-visible { color: #0B1A12; }
 @media (max-width: 900px) { .gt32u2086-card-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Trang có thẻ mục lục (trang chủ, trang PART): dùng hết chiều rộng, 3 cột thẻ khi đủ chỗ.
+   Số cột: đổi số 3 trong repeat(3, ...) bên dưới. Đoạn văn vẫn giữ tối đa 860px cho dễ đọc. */
+div.textblock.gt32u2086-wide { max-width: none; }
+div.textblock.gt32u2086-wide > p { max-width: 860px; }
+.gt32u2086-cards { container-type: inline-size; }
+@container (min-width: 900px) {
+  .gt32u2086-card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 @media (max-width: 767px) { .gt32u2086-crumbs { padding: 16px 16px 0; } }
 @media (prefers-reduced-motion: reduce) { .gt32u2086-card-items, .gt32u2086-card-more svg, a.gt32u2086-read-all { transition: none; } }
 

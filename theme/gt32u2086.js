@@ -77,6 +77,8 @@
 
   function buildCards() {
     document.querySelectorAll('.gt32u2086-cards > ul').forEach(function (ul) {
+      var block = ul.closest('div.textblock');
+      if (block) block.classList.add('gt32u2086-wide');   // card pages use the full width (3 columns)
       var grid = document.createElement('div');
       grid.className = 'gt32u2086-card-grid';
       Array.prototype.forEach.call(ul.children, function (li) {

@@ -7,7 +7,7 @@ const path = require('path');
 const HTML = path.resolve(__dirname, '..', 'build', 'html');
 const structure = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'pages', '_structure.json'), 'utf8'));
 const VERSION = 'v1.0';  // số phiên bản tài liệu
-const COPYRIGHT = 'Copyright © 2026 GTINX';
+const COPYRIGHT = 'Copyright © 2026 GTINX - FPT Telecom';
 
 (async () => {
   const browser = await chromium.launch();
